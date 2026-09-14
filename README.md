@@ -2,6 +2,8 @@
 
 A self-hosted invitation page for Spotify Jam. Guests solve a playful mini-game, then receive a fresh Jam invitation. A Spicetify extension on the host computer can resume paused music before handing over the link.
 
+**Built by [DN Automation](https://dnautomation.tech).** Automation, integrations and custom software solutions.
+
 The guest interface is currently in Portuguese. Texts are generic and can be edited in `spotify-jam-page.html` and `spotify-jam-lan-server.js`.
 
 ## What it does
@@ -138,4 +140,12 @@ npm test
 
 Tests run with temporary configuration, without real Spotify credentials or access to a live Jam. GitHub Actions runs the same tests. Guest-account acceptance and Windows startup behavior require manual verification.
 
-See [SECURITY.md](SECURITY.md) for the trust model. Licensed under MIT.
+See [SECURITY.md](SECURITY.md) for the trust model.
+
+## About DN Automation
+
+Spotify Jam Lobby is an open-source project developed by [DN Automation](https://dnautomation.tech).
+
+DN Automation builds custom automation, integrations and software solutions for businesses and individuals.
+
+Licensed under MIT.
