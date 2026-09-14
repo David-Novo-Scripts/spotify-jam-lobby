@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt"><meta charset="utf-8"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spotify Jam Lobby</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101714;color:#eef9f1;font:18px system-ui;display:grid;min-height:100vh;place-items:center}main{width:min(560px,94vw);padding:32px;background:#1b2922;border:1px solid #395343;border-radius:24px}h1{font-size:36px;margin:20px 0}small{color:#a7c4b0}button,input{font:inherit;padding:14px;border-radius:12px;border:0}button{background:#83efab;color:#102317;cursor:pointer}button:disabled{opacity:.45;cursor:default}#game{margin:24px 0;display:flex;gap:10px;flex-wrap:wrap}#game button{min-width:70px;min-height:65px}.lit{background:#fff!important;box-shadow:0 0 25px #b5ff95;transform:scale(1.07)}#status{padding:12px;border-radius:10px;background:#101714}#message{min-height:50px}input{width:120px}.bar{width:44px;background:#83efab;display:flex;align-items:end;justify-content:center;color:#102317;border-radius:8px 8px 0 0}a{color:#83efab}#bars{display:flex;align-items:end;gap:12px;width:100%;height:170px}
+body{background:radial-gradient(ellipse at 10% 0%,#243b32,transparent 55%),radial-gradient(ellipse at 95% 95%,#382649,transparent 50%),#0b100e;font-size:16px;padding:28px 0}main{width:min(740px,94vw);padding:clamp(24px,6vw,56px);background:linear-gradient(145deg,#1d2a24ed,#111a16f5);border-color:#ffffff18;box-shadow:0 30px 100px #0007;border-radius:30px}h1{font-size:clamp(36px,7vw,64px);letter-spacing:-3px;line-height:1.04;max-width:530px;margin:28px 0 20px}h1 em{color:#b4f776;font-style:normal}small{letter-spacing:2px;font-size:10px;font-weight:700}.top{display:flex;justify-content:space-between;align-items:center}.badge{border:1px solid #b4f77655;border-radius:30px;padding:7px 11px;color:#b4f776;font-size:11px}.intro{color:#a3b4aa;line-height:1.7;max-width:450px}#status{font-size:13px;border:1px solid #ffffff10;padding:15px 18px;line-height:1.6;margin:26px 0}h3{font-size:19px;line-height:1.5;font-weight:500}button{transition:transform .15s,background .15s;background:#b4f776;font-weight:650}button:hover:not(:disabled){transform:translateY(-3px);background:#caff9b}button:focus-visible,input:focus-visible{outline:3px solid #d6b4ff;outline-offset:4px}#retry{background:transparent;border:1px solid #ffffff30;color:#e0ebe4;font-size:14px}#game{padding:20px;background:#090f0c77;border-radius:20px;justify-content:center}#game:empty{display:none}#game button{flex:1 0 18%;background:#26392e;color:#d9ffc4;border:1px solid #ffffff18;font-size:24px}#message{font-size:14px;color:#c6d5cc;line-height:1.6}.footer{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid #ffffff12;padding-top:22px;margin-top:16px}.footer span{font-size:11px;color:#82998b}.code{font-size:36px;letter-spacing:12px;text-align:center;width:100%;padding:20px;color:#b4f776}.note{font-size:32px;padding:8px}.bar{background:linear-gradient(#d2ff9b,#57854f)}@media(prefers-reduced-motion:reduce){button{transition:none}}
+#status{display:grid;grid-template-columns:10px minmax(0,1fr);column-gap:14px;align-items:start}
+#status::before{content:'';width:8px;height:8px;margin-top:7px;border-radius:50%;background:#94a39a}
+#status[data-state=online]::before{background:#b4f776}
+#status[data-state=offline]::before{background:#e6b779}
+body{place-items:center;padding:16px 0;overflow:hidden}
+main{height:auto;min-height:0;max-height:calc(100vh - 32px);overflow-y:auto;align-self:center;scrollbar-width:thin;scrollbar-color:#83efab66 transparent}
+main::-webkit-scrollbar{width:9px}
+main::-webkit-scrollbar-track{background:transparent;margin:18px 0}
+main::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#b4f776aa,#83efab66);border:2px solid transparent;background-clip:padding-box;border-radius:999px}
+main::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#caff9b,#83efab);border:2px solid transparent;background-clip:padding-box}
+#game{display:flex;min-height:190px}
+#game.is-loading{display:flex;min-height:170px}
+#game{overflow-anchor:none}
+#game.tribute-lock{user-select:none;-webkit-user-select:none}
+#game.tribute-lock textarea{user-select:text;-webkit-user-select:text}
+</style>
+<main><div class="top"><small>SPOTIFY JAM LOBBY</small><span class="badge">INVITE ONLY · SORT OF</span></div><h1>Queres entrar?<br><em>Mostra o que vales.</em></h1><p class="intro">A playlist está escolhida. A tua entrada, nem por isso.<br>Supera a prova e conquista o teu lugar na Jam.</p><p id="status">A verificar o Spotify…</p><h3 id="question"></h3><div id="game"></div><p id="message" role="status" aria-live="polite"></p><div class="footer"><button id="retry">↻ Outra prova</button><span>SEM MÉRITO, SEM AUX.</span></div></main>
+<script>
+const key=new URL(location).searchParams.get('key'), $=id=>document.getElementById(id);
+let online=false,busy=false,challenge=null,generation=0,loading=false,retryScroll=0;
+const tributeStateKey='spotify-jam-lobby.tribute';
+try{localStorage.removeItem('jam.tributoInfinito');}catch{}
+const tributeState=()=>{try{return JSON.parse(localStorage.getItem(tributeStateKey)||'null');}catch{return null;}};
+const saveTributeState=()=>{try{localStorage.setItem(tributeStateKey,'1');}catch{}};
+const clearTributeState=()=>{try{localStorage.removeItem(tributeStateKey);}catch{}};
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+async function countdown(seconds,token,label){
+  const end=Date.now()+seconds*1000;
+  while(generation===token){
+    const left=Math.max(0,Math.ceil((end-Date.now())/1000));
+    $('message').textContent=label+' · '+left+' s';
+    if(left===0)return;
+    await pause(100);
+  }
+}
+const hosts=['ao anfitrião','ao DJ','a quem está a organizar a Jam'];
+const offlineLine='Pede gentilmente '+hosts[Math.floor(Math.random()*hosts.length)]+' para abrir o Spotify. A pista não se liga sozinha.';
+const extensionLine='Se o Spotify já estiver aberto, pede ao anfitrião para verificar a extensão Spotify Jam Lobby.';
+const originalApiMessage=e=>/anfitri|Spotify nao esta aberto|Spotify não respondeu/.test(e)?offlineLine:e;
+async function api(route,body){const r=await fetch(route+(route.includes('?')?'&':'?')+'key='+encodeURIComponent(key),{signal:AbortSignal.timeout(8000),...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});const d=await r.json();if(!r.ok)throw Error(originalApiMessage(d.error||'Pedido recusado.'));return d;}
+function clearGame(keepSpace=false){generation++;challenge=null;const game=$('game');game.replaceChildren();game.classList.remove('tribute-lock');game.classList.toggle('is-loading',keepSpace);$('question').textContent='';}
+function restoreScroll(top){const putBack=()=>window.scrollTo({top,behavior:'auto'});putBack();requestAnimationFrame(putBack);setTimeout(putBack,50);}
+async function availability(){try{const s=await api('/api/availability');const was=online;online=s.online;if(s.tributeEnabled===false)clearTributeState();$('status').dataset.state=online?'online':'offline';$('status').textContent=online?'O DJ está ligado. Mostra o que vales.':'Spotify indisponível. '+offlineLine+' '+extensionLine;$('retry').disabled=!online||busy;if(!online&&!busy){clearGame();}if(online&&!was&&!busy)await load();}catch(e){online=false;$('status').dataset.state='offline';$('status').textContent='Servidor sem resposta. Pede '+hosts[Math.floor(Math.random()*hosts.length)]+' para iniciar o servidor da Jam.';$('retry').disabled=true;if(!busy)clearGame();}}
+async function stage(text,ms=700){
+  const el=$('message'); el.textContent=text;
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches)el.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'translateY(0)'}],{duration:220});
+  await pause(ms);
+}
+async function submit(answer){
+  if(busy||!online||!challenge)return;
+  if(challenge.type==='tribute'){
+    if(String(answer).trim()!==challenge.data){$('message').textContent='O elogio merece mais atenção. Escreve a frase exactamente.';return;}
+    clearTributeState();
+  }
+  busy=true;$('retry').disabled=true;
+  const id=challenge.id;clearGame();
+  try{
+    await stage('A verificar a tua prova…',450);
+    const start=await api('/api/request',{challengeId:id,answer:String(answer)});
+    await stage('Muito bem. Mereceste.',950);
+    await stage('A abrir-te a porta da Jam…',650);
+    const deadline=Date.now()+50000;
+    while(Date.now()<deadline){
+      const state=await api(start.statusUrl);
+      if(state.error)throw Error(originalApiMessage(state.error));
+      if(state.url){
+        await stage('Entrada concedida. Bora ouvir música.',1000);
+        const link=document.createElement('a');link.href=state.url;link.textContent='Abrir a Jam ↗';
+        $('message').append(document.createElement('br'),link);
+        location.assign(state.url);return;
+      }
+      await pause(1200);
+    }
+    throw Error('O Spotify não respondeu a tempo. '+extensionLine);
+  }catch(e){await stage(e.message,0);}
+  finally{busy=false;$('retry').disabled=!online;}
+}
+function button(label,fn){const b=document.createElement('button');b.textContent=label;b.onclick=fn;$('game').append(b);return b;}
+async function load(){if(loading||busy||!online)return;const savedScroll=retryScroll||window.scrollY;retryScroll=0;loading=true;const keepTribute=challenge?.type==='tribute'&&!!tributeState();if(keepTribute){generation++;$('retry').disabled=true;}else{clearGame(true);$('message').textContent='';}try{const state=tributeState();challenge=await api('/api/challenge'+(state?'?tribute=1':''));if(challenge.type==='tribute'&&!state)saveTributeState();const c=challenge,token=generation;$('game').replaceChildren();$('game').classList.remove('is-loading');$('game').classList.toggle('tribute-lock',c.type==='tribute');$('question').textContent=c.question;
+if(c.type==='maze'){
+  let pos=0,route=[0];const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(5,1fr);gap:5px;width:100%';$('game').append(grid);
+  const cells=Array.from({length:25},(_,i)=>{const b=document.createElement('button');b.style.cssText='min-width:0;min-height:42px;padding:4px';b.textContent=i===0?'♪':i===24?'★':c.data.includes(i)?'·':'▪';b.disabled=!c.data.includes(i);b.onclick=()=>{if(generation!==token)return;if(Math.abs(i%5-pos%5)+Math.abs(Math.floor(i/5)-Math.floor(pos/5))!==1)return;cells[pos].textContent='·';pos=i;route.push(i);b.textContent='♪';if(i===24)submit(route.join(','));};grid.append(b);return b;});
+}else if(c.type==='target'){
+  const arena=document.createElement('div');arena.style.cssText='height:270px;width:100%;position:relative;border:1px dashed #83efab55;border-radius:16px';$('game').append(arena);
+  let hits=0,start=0;const b=document.createElement('button');b.textContent='♪';b.setAttribute('aria-label','Apanhar a nota');b.style.cssText='position:absolute;min-width:48px;min-height:48px;width:48px;height:48px;padding:0';arena.append(b);
+  function move(){b.style.left=c.data[hits][0]+'%';b.style.top=c.data[hits][1]+'%';}move();
+  const timer=setInterval(()=>{if(generation!==token){clearInterval(timer);return;}if(start){const left=12000-(Date.now()-start);$('message').textContent=hits+' / 6 notas · '+Math.max(0,Math.ceil(left/1000))+' segundos';if(left<=0){clearInterval(timer);clearGame();$('message').textContent='A batida fugiu! Tenta outra prova.';}}},150);
+  b.onclick=()=>{if(generation!==token)return;if(!start)start=Date.now();if(Date.now()-start>12000)return;hits++;if(hits===6){clearInterval(timer);submit('caught');}else move();};
+}else if(c.type==='colors'){
+  const labels=['Verde ◆','Rosa ●','Azul ▲','Ouro ■'],colors=['#b4f776','#ffb4d7','#a8cfff','#ffe399'];let answer=[];
+  const preview=document.createElement('p');preview.style.width='100%';preview.textContent=c.data.map(i=>labels[i]).join(' → ');$('game').append(preview);
+  labels.forEach((label,i)=>{const b=button(label,()=>{answer.push(i);$('message').textContent=answer.length+' / 5 cores';if(answer.length===5)submit(answer.join(','));});b.style.background=colors[i];b.style.color='#182018';b.style.fontSize='16px';});
+}else if(c.type==='difference'){
+  const symbols=['◆','●','▲','■'];c.data.forEach((panel,p)=>{const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:5px;flex:1';grid.setAttribute('aria-label',p?'Painel para escolher':'Painel de referência');$('game').append(grid);panel.forEach((n,i)=>{const b=document.createElement('button');b.textContent=symbols[n];b.style.cssText='min-width:0;min-height:44px;padding:5px';b.disabled=p===0;b.onclick=()=>submit(i);grid.append(b);});});
+}else if(c.type==='tribute'){const game=$('game');game.classList.add('tribute-lock');const quote=document.createElement('blockquote');quote.textContent=c.data;quote.style.cssText='margin:0 0 16px;padding:20px;border-left:3px solid #b4f776;line-height:1.7;width:100%';quote.addEventListener('copy',e=>{e.preventDefault();$('message').textContent='Nada de copiar o tributo. O DJ merece uma frase escrita por ti.';});quote.addEventListener('dragstart',e=>e.preventDefault());quote.addEventListener('contextmenu',e=>e.preventDefault());$('game').append(quote);const input=document.createElement('textarea');input.rows=4;input.setAttribute('aria-label','Escreve a declaração');input.placeholder='Declaro, por minha livre vontade musical…';input.style.cssText='width:100%;background:#17251c;color:#fff;border:1px solid #617353;border-radius:12px;padding:16px;font:inherit;resize:vertical';$('game').append(input);button('Assinar e entrar',()=>submit(input.value.trim()));$('message').textContent='Escreve a frase tal como aparece, incluindo acentos e pontuação. Só fica nesta brincadeira; não é publicada.';
+}else if(c.type==='odd'){c.data.forEach((s,i)=>button(s,()=>submit(i)));
+}else if(c.type==='pairs'){let selected=[],found=0,tries=0,locked=false;const cards=c.data.map((s,i)=>{const b=button('?',async()=>{if(locked||b.disabled||generation!==token)return;b.textContent=s;b.disabled=true;selected.push(i);if(selected.length!==2)return;locked=true;tries++;const [a,z]=selected;await pause(650);if(generation!==token)return;if(c.data[a]===c.data[z])found++;else{cards[a].textContent=cards[z].textContent='?';cards[a].disabled=cards[z].disabled=false;}selected=[];locked=false;$('message').textContent=found+' / 4 pares · '+tries+' / 8 tentativas';if(found===4)submit('matched');else if(tries===8){clearGame();$('message').textContent='A memória ficou em buffering. Tenta outra prova!';}});return b;});
+}else if(c.type==='reverse'){const code=document.createElement('div');code.className='code';code.textContent=c.data.join(' ');$('game').append(code);await countdown(6,token,'Memoriza o código');if(generation!==token)return;code.textContent='• • • • •';const input=document.createElement('input');input.inputMode='numeric';input.maxLength=5;input.setAttribute('aria-label','Código invertido');$('game').append(input);button('Confirmar',()=>{if(input.value)submit(input.value.trim());});$('message').textContent='Do último para o primeiro. Sem espreitar.';input.focus({preventScroll:true});
+}else if(c.type==='count'){c.data.forEach(s=>{const el=document.createElement('span');el.className='note';el.textContent=s;$('game').append(el);});const input=document.createElement('input');input.type='number';input.setAttribute('aria-label','Número de símbolos');$('game').append(input);button('Confirmar',()=>{if(input.value!=='')submit(input.value);});
+}else if(c.type==='memory'){let entered=[],ready=false;const pads=['◆','●','▲','■'].map((s,i)=>button(s,()=>{if(!ready||generation!==token)return;entered.push(i);$('message').textContent=entered.length+' / 6';if(entered.length===6){ready=false;submit(entered.join(','));}}));pads.forEach(b=>b.disabled=true);const clock=countdown(6,token,'Memoriza as luzes');for(const i of c.data){if(generation!==token)return;pads[i].classList.add('lit');await pause(750);pads[i].classList.remove('lit');await pause(250);}await clock;if(generation!==token)return;ready=true;pads.forEach(b=>b.disabled=false);$('message').textContent='Agora repete a sequência.';
+}else if(c.type==='order'){let next=1,start=0;const timer=setInterval(()=>{if(generation!==token){clearInterval(timer);return;}if(start){const left=8000-(Date.now()-start);$('message').textContent=Math.max(0,Math.ceil(left/1000))+' segundos';if(left<=0){clearInterval(timer);clearGame();$('message').textContent='Tempo esgotado! Tenta outro desafio.';}}},200);c.data.forEach(n=>{const b=button(n,()=>{if(generation!==token)return;if(!start){start=Date.now();$('message').textContent='8 segundos';}if(Date.now()-start>8000)return;if(n!==next){clearInterval(timer);clearGame();$('message').textContent='Nota fora de ordem! Tenta outra vez.';return;}b.disabled=true;next++;if(next===10){clearInterval(timer);submit('1,2,3,4,5,6,7,8,9');}});});
+}else{const bars=document.createElement('div');bars.id='bars';c.data.forEach(n=>{const bar=document.createElement('div');bar.className='bar';bar.style.height=(n/Math.max(...c.data)*150)+'px';bar.textContent=n;bars.append(bar);});$('game').append(bars);const input=document.createElement('input');input.type='number';input.setAttribute('aria-label','Próximo valor');$('game').append(input);button('Desbloquear',()=>{if(input.value)submit(input.value);});input.onkeydown=e=>{if(e.key==='Enter'&&input.value)submit(input.value);};}
+}catch(e){$('message').textContent=e.message;}finally{loading=false;restoreScroll(savedScroll);}}
+$('retry').addEventListener('pointerdown',()=>{retryScroll=window.scrollY;});$('retry').onclick=load;availability();setInterval(availability,2500);
+</script></html>

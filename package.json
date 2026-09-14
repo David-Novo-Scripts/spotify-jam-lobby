@@ -1,0 +1,13 @@
+{
+  "name": "spotify-jam-lobby",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A self-hosted LAN invitation page for Spotify Jam with playful challenges and a Spicetify bridge.",
+  "scripts": {
+    "start": "node spotify-jam-lan-server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
