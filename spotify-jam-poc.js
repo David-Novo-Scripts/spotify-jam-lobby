@@ -3,6 +3,8 @@
 (() => {
   // Retoma a música quando alguém pede entrada pela página da Jam.
   const AUTO_PLAY_ON_ENTRY = true;
+  // Usa o PC desta extensão como saída de reprodução nos pedidos de entrada.
+  const USE_HOST_PC_ON_ENTRY = true;
   const SOCIAL_CONNECT =
     "https://spclient.wg.spotify.com/social-connect/v2/sessions";
   const getSessionField = (response, field) =>
@@ -127,10 +129,28 @@
     if (!player?.isPlaying || !player?.play) {
       throw new Error("O leitor do Spotify ainda não está pronto. Tenta novamente.");
     }
-    if (player.isPlaying()) return;
+    const connect = globalThis.Spicetify?.Platform?.ConnectAPI;
+    if (USE_HOST_PC_ON_ENTRY) {
+      if (!connect?.getState || !connect?.transferPlayback) {
+        throw new Error("Não foi possível identificar o dispositivo deste PC no Spotify.");
+      }
+      if (connect.getState()?.activeDevice?.isLocal !== true) {
+        await connect.transferPlayback("local_device", {});
+        for (let attempt = 0; attempt < 32; attempt++) {
+          if (connect.getState()?.activeDevice?.isLocal === true) break;
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        if (connect.getState()?.activeDevice?.isLocal !== true) {
+          throw new Error("O Spotify não transferiu a reprodução para este PC. Tenta novamente.");
+        }
+      }
+    }
+    const ready = () => player.isPlaying() &&
+      (!USE_HOST_PC_ON_ENTRY || connect.getState()?.activeDevice?.isLocal === true);
+    if (ready()) return;
     await player.play();
     for (let attempt = 0; attempt < 20; attempt++) {
-      if (player.isPlaying()) return;
+      if (ready()) return;
       await new Promise(resolve => setTimeout(resolve, 250));
     }
     throw new Error("Não foi possível retomar a música. O anfitrião precisa de selecionar uma música e um dispositivo no Spotify.");

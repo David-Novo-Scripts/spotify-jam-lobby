@@ -55,6 +55,8 @@ It generates `spotify-jam-lan-config.json` locally and prints a private LAN URL.
 3. Have another account join through the page and confirm participation.
 4. Pause an already selected track and retry through the page to test automatic resume.
 
+With `AUTO_PLAY_ON_ENTRY` and `USE_HOST_PC_ON_ENTRY` enabled, an approved request transfers playback from another device to the host PC before resuming. It waits for the local device and playback to be active before returning the invitation. Disable `USE_HOST_PC_ON_ENTRY` to keep the current output device. If automatic playback is disabled, no device transfer is attempted.
+
 An old `spotify.link` bypasses this page and cannot trigger resume-on-entry. This project does not change Spotify's guest-control permissions. If the music queue/device is empty or unavailable, automatic resume can fail.
 
 ## Options
@@ -62,6 +64,7 @@ An old `spotify.link` bypasses this page and cannot trigger resume-on-entry. Thi
 | Variable | File | Default |
 | --- | --- | --- |
 | `TRIBUTE_ENABLED` | `spotify-jam-lan-server.js` | `false`: optional DJ tribute excluded, other challenges required |
+| `USE_HOST_PC_ON_ENTRY` | `spotify-jam-poc.js` | `true`: transfer playback to the computer running the extension before resuming |
 | `AUTO_PLAY_ON_ENTRY` | `spotify-jam-poc.js` | `true`: resume paused playback on an approved invitation request |
 
 With tribute disabled, the server ignores forced tribute requests and the page clears saved tribute state. Refresh an already-open page to clear a displayed challenge.

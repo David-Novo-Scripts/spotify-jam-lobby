@@ -62,13 +62,27 @@ test('resume only calls play when paused and reports unavailable playback',async
  const fn=src.slice(src.indexOf('  async function resumeForJamEntry'),src.indexOf('  globalThis.createSpotifyJamLink'));
  for(const mode of ['playing','paused','empty','disabled']) {
   let playing=mode==='playing',calls=0;
-  const ctx={AUTO_PLAY_ON_ENTRY:mode!=='disabled',Spicetify:{Player:{isPlaying:()=>playing,play:async()=>{calls++;if(mode==='paused')playing=true;}}},setTimeout:r=>r()};
+  const ctx={USE_HOST_PC_ON_ENTRY:false,AUTO_PLAY_ON_ENTRY:mode!=='disabled',Spicetify:{Player:{isPlaying:()=>playing,play:async()=>{calls++;if(mode==='paused')playing=true;}}},setTimeout:r=>r()};
   vm.createContext(ctx);vm.runInContext(fn,ctx);
-  if(mode==='empty')await assert.rejects(ctx.resumeForJamEntry(),/selecionar uma música/);else await ctx.resumeForJamEntry();
+  if(mode==='empty')await assert.rejects(ctx.resumeForJamEntry(),/selecionar uma/);else await ctx.resumeForJamEntry();
   assert.equal(calls,['paused','empty'].includes(mode)?1:0);
  }
 });
 test('guest script parses',()=>{
  const html=fs.readFileSync(path.join(root,'spotify-jam-page.html'),'utf8');
  new vm.Script(html.split('<script>')[1].split('</script>')[0]);
+});
+
+test('entry transfers remote playback to this PC before play, and fails closed',async()=>{
+ const src=fs.readFileSync(path.join(root,'spotify-jam-poc.js'),'utf8');
+ const fn=src.slice(src.indexOf('  async function resumeForJamEntry'),src.indexOf('  globalThis.createSpotifyJamLink'));
+ for(const mode of ['remote-paused','remote-playing','local-playing','transfer-failed','missing-api']) {
+  let local=mode==='local-playing',playing=mode==='local-playing'||mode==='remote-playing';
+  const actions=[];
+  const connect={getState:()=>({activeDevice:{isLocal:local}}),transferPlayback:async id=>{assert.equal(id,'local_device');actions.push('transfer');if(mode!=='transfer-failed'){local=true;playing=false;}}};
+  const ctx={AUTO_PLAY_ON_ENTRY:true,USE_HOST_PC_ON_ENTRY:true,Spicetify:{Platform:{ConnectAPI:mode==='missing-api'?null:connect},Player:{isPlaying:()=>playing,play:async()=>{assert(local);actions.push('play');playing=true;}}},setTimeout:r=>r()};
+  vm.createContext(ctx);vm.runInContext(fn,ctx);
+  if(mode==='transfer-failed'||mode==='missing-api')await assert.rejects(ctx.resumeForJamEntry());else await ctx.resumeForJamEntry();
+  assert.deepEqual(actions,mode==='local-playing'||mode==='missing-api'?[]:mode==='transfer-failed'?['transfer']:['transfer','play']);
+ }
 });
