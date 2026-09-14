@@ -22,6 +22,16 @@ Unofficial and not affiliated with Spotify. Uses internal Spotify client APIs, w
 
 The server/extension use port **38765** by default. Windows is the tested setup; automatic startup scripts are Windows-only.
 
+## Which Spotify app should the host use?
+
+**Use Spotify Desktop installed directly from Spotify's website.** This is the Windows setup tested with this project. On the [Windows download page](https://www.spotify.com/download/windows/), choose the direct Spotify download rather than the Microsoft Store option.
+
+The host extension does not run in the Spotify Web Player, a browser-installed web app, or the Android/iOS apps. Guests can still open the invitation page in a browser and join through their Spotify app; they do not install Spicetify.
+
+The Microsoft Store edition is also a desktop app, but it has not been tested with this project. [Spicetify v2.45.0](https://github.com/spicetify/cli/releases/tag/v2.45.0) lists Store support and notes that it may need to be reapplied each time that edition is closed. It is not accurate to say the Store edition never works, but use the direct installer to follow the tested setup and avoid that extra recovery step.
+
+If you already have the Store edition and want to follow this guide, close Spotify, uninstall that edition through Windows Settings, install the direct download, sign in and test playback before configuring Spicetify. Offline downloads may need to be downloaded again. Do not keep two editions and accidentally apply the extension to one while opening the other.
+
 ## Install on Windows
 
 Download this repository into a permanent folder. Open PowerShell in that folder.
